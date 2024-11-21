@@ -1,50 +1,48 @@
 import os
-import json
 import requests
-from crewai import Agent, Task
+from bs4 import BeautifulSoup
 from langchain.tools import tool
-from unstructured.partition.html import partition_html
+from langchain_groq import ChatGroq
+from langchain import PromptTemplate
+from langchain.schema import Document
+from langchain.chains.summarize import load_summarize_chain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from dotenv import load_dotenv
 load_dotenv()
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
-class ScrapingAnt():
+def scrape_website_content(website):
+    response = requests.get(website)
+    soup = BeautifulSoup(response.text, 'html.parser')
 
-    @tool("Scrape website content")
-    def scrape_and_summarize_website(website):
-        """Useful to scrape and summarize a website content"""
+    paragraphs = soup.find_all(['p', 'h1', 'h2', 'h3'])
+    content = " ".join([para.get_text() for para in paragraphs])
 
-        url = f"https://api.scrapingant.com/v2/extended?url={website}&x-api-key={os.environ['SCRAPINGANT_API_KEY']}"
-        payload = json.dumps({"url": website})
+    return content
+    
+@tool("Scrape website content")
+def scrape_and_summarize_website(website):
+    """Designed to scrape the content of a given website and generate a concise, meaningful summary of the information present on the site. It is particularly useful for extracting and condensing large      amounts of textual data into a shorter format that captures the key points."""
 
-        headers = {'cache-control': 'no-cache', 
-                   'content-type': 'application/json',
-                   'User-Agent': os.environ['USER_AGENT']}
+    content = scrape_website_content(website)
+    documents = [Document(page_content=content)]
+    final_documents = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=50).split_documents(documents)
 
-        response = requests.request("POST", url, headers=headers, data=payload)
-        if response.status_code != 200:
-            raise Exception(f"Failed to retrieve content: {response.status_code}")
-        
-        elements = partition_html(text=response.text)
-        content = "\n\n".join([str(element) for element in elements])
-        content_chunks = [content[i:i + 8000] for i in range(0, len(content), 8000)]
+    template = """
+                    Please summarize the following YouTube transcript segment:
+                    Speech: {text}
+                    Provide a detailed summary, highlighting key ideas and important points. 
+                    Summary:
+               """
+    prompt = PromptTemplate(input_variables=['text'], template=template)
 
-        summaries = []
-        for chunk in content_chunks:
+    model = ChatGroq(model="Gemma-7b-It", api_key=GROQ_API_KEY)
+    summary_chain = load_summarize_chain(
+        model, 
+        chain_type="stuff", 
+        prompt=prompt, 
+        verbose=False)
 
-            agent = Agent(
-                role='Principal Researcher',
-                goal='Do amazing research and provide concise summary of the content',
-                backstory="You're a Principal Researcher at a large company doing research about a given topic.",
-                allow_delegation=False
-            )
-            
-            task = Task(
-                agent=agent,
-                description=f'Analyze and summarize the content below. Make sure to include the most relevant information in the summary, return only the summary nothing else.\n\nCONTENT\n----------\n{chunk}'
-            )
-
-            summary = task.execute()
-            summaries.append(summary)
-
-        return "\n\n".join(summaries)
+    summary = summary_chain.invoke({'input_documents': final_documents})['output_text']
+    return summary

@@ -1,48 +1,11 @@
 import pdfkit
 import streamlit as st
-from crewai import Crew
-from tasks import StockAnalysisTasks
-from agents import StockAnalysisAgents
+from crewai import Crew, Process
+from tasks import research_task, financial_task, recommendation_task
+from agents import research_analyst, financial_analyst, investment_advisor
 
 from dotenv import load_dotenv
 load_dotenv()
-
-class FinancialCrew:
-    def __init__(self, company):
-        self.company = company
-
-    def run(self):
-        try:
-            agents = StockAnalysisAgents()
-            tasks = StockAnalysisTasks()
-
-            research_analyst_agent = agents.research_analyst()
-            financial_analyst_agent = agents.financial_analyst()
-            investment_advisor_agent = agents.investment_advisor()
-
-            research_task = tasks.research(research_analyst_agent, self.company)
-            financial_task = tasks.financial_analysis(financial_analyst_agent)
-            recommend_task = tasks.recommend(investment_advisor_agent)
-
-            crew = Crew(
-                agents=[
-                    research_analyst_agent,
-                    financial_analyst_agent,
-                    investment_advisor_agent
-                ],
-                tasks=[
-                    research_task,
-                    financial_task,
-                    recommend_task
-                ],
-                verbose=True
-            )
-
-            result = crew.kickoff()
-            return result
-        
-        except Exception as e:
-            return f"Error in processing: {e}"
 
 def main():
     st.title("MultiAgent Finance Consultant🔍")
@@ -70,18 +33,27 @@ def main():
 
     if st.button("Analyze and Generate Report"):
         if company:
-            financial_crew = FinancialCrew(company)
-            result = financial_crew.run()
+            crew = Crew(
+                        agents=[research_analyst, financial_analyst, investment_advisor],
+                        tasks=[research_task, financial_task, recommendation_task],
+                        process=Process.sequential,
+                        memory=True,
+                        cache=True,
+                        max_rpm=100
+                        )
             
-            if "Error" in result:
-                st.error(result)
+            inputs = {"ticker": company}
+            results = crew.kickoff(inputs=inputs)
+
+            if "Error" in results:
+                st.error(results)
             else:
                 st.markdown("## Investment Recommendations")
-                st.markdown(result)
+                st.markdown(results)
                 
                 if st.button("Download Report as PDF"):
                     try:
-                        pdf = pdfkit.from_string(result, False)
+                        pdf = pdfkit.from_string(results, False)
                         st.download_button("Download PDF", pdf, company + "_report.pdf", "application/pdf")
                     except Exception as e:
                         st.error("PDF generation failed. Ensure wkhtmltopdf is installed.")

@@ -1,82 +1,114 @@
 from crewai import Task
-from textwrap import dedent
+from agents import financial_analyst, research_analyst, investment_advisor
 
-class StockAnalysisTasks():
-  def research(self, agent, company):
-    return Task(
-      description=dedent(f"""
-        Collect and summarize recent news articles, press
-        releases, and market analyses related to the stock and
-        its industry.
-        Pay special attention to any significant events, market
-        sentiments, and analysts' opinions. Also include upcoming 
-        events like earnings and others.
-  
-        Your final answer MUST be a report that includes a
-        comprehensive summary of the latest news, any notable
-        shifts in market sentiment, and potential impacts on 
-        the stock.
-        Also make sure to return the stock ticker.
-        
-        {self.__tip_section()}
-  
-        Make sure to use the most recent data as possible.
-        Selected company by the customer: {company}
-      """),
-      agent=agent,
-      expected_output="A comprehensive summary report of the latest news, market sentiment shifts, and potential impacts on the stock."
-    )
+def extract_top_link(search_results):
+    lines = search_results.split("\n")
+
+    for line in lines:
+        if "Link:" in line:
+            return line.replace("Link: ", "").strip()
+    return None
+
+def execute_research(ticker):
+    search_results = research_analyst.invoke_tool("Search topic on the internet", query=f"Latest news about {ticker}")
+    top_link = extract_top_link(search_results)
+    summary = research_analyst.invoke_tool("Scrape website content", website=top_link)
     
-  def financial_analysis(self, agent): 
-    return Task(
-      description=dedent(f"""
-        Conduct a thorough analysis of the stock's financial
-        health and market performance. 
-        This includes examining key financial metrics such as
-        P/E ratio, EPS growth, revenue trends, and 
-        debt-to-equity ratio. 
-        Also, analyze the stock's performance in comparison 
-        to its industry peers and overall market trends.
+    return f"""
+    Report for {ticker}:
+    - Latest News: {search_results}
+    - Summary of Top Article: {summary}
+    """
 
-        Your final report MUST expand on the summary provided
-        but now including a clear assessment of the stock's
-        financial standing, its strengths and weaknesses, 
-        and how it fares against its competitors in the current
-        market scenario.
-                         
-        {self.__tip_section()}
+def execute_financial_analysis(ticker):
+    search_results = financial_analyst.invoke_tool("Search topic on the internet", query=f"Latest financial analysis of {ticker}")
+    top_link = extract_top_link(search_results)
+    summary = financial_analyst.invoke_tool("Scrape website content", website=top_link)
 
-        Make sure to use the most recent data possible.
-      """),
-      agent=agent,
-      expected_output="A detailed financial analysis report including key financial metrics and a comparison with industry peers."
+    return f"""
+    Report for {ticker}:
+    - Latest Financial News: {search_results}
+    - Summary of Top Article: {summary}
+    """
+
+def execute_investment_advice(inputs):
+    research_summary = inputs['research_summary']
+    financial_summary = inputs['financial_summary']
+    
+    recommendation = ""
+    
+    if "positive" in research_summary.lower():
+        market_sentiment = "positive"
+    elif "negative" in research_summary.lower():
+        market_sentiment = "negative"
+    else:
+        market_sentiment = "neutral"
+    
+    if "strong" in financial_summary.lower() and "growth" in financial_summary.lower():
+        financial_health = "strong"
+    elif "weak" in financial_summary.lower() or "decline" in financial_summary.lower():
+        financial_health = "weak"
+    else:
+        financial_health = "stable"
+    
+    if market_sentiment == "positive" and financial_health == "strong":
+        recommendation = "Buy"
+    elif market_sentiment == "negative" and financial_health == "weak":
+        recommendation = "Sell"
+    else:
+        recommendation = "Hold"
+    
+    return f"Recommendation: {recommendation}\n\nResearch Summary: {research_summary}\nFinancial Health: {financial_health}"
+
+research_task = Task(
+    description=("""Collect and summarize recent news articles and press releases for {ticker}.
+    
+    Subtasks:
+    1. Use `search_internet` to find relevant news articles and press releases about {ticker}.
+    2. Use `scrape_and_summarize_website` to extract and summarize content from the most relevant links.
+    
+    Combine all findings into a single report that includes:
+    - A summary of the latest news and market sentiment
+    - Key events impacting the stock
+    - Any upcoming announcements or trends
+    - The stock ticker ({ticker})
+    
+    Your output should be concise but include all key points, using the most recent and relevant data available.
+    """),
+    agent=research_analyst,
+    expected_output="A comprehensive summary report of the latest news, market sentiment shifts, and potential impacts on the stock.",
+    function=execute_research
+)
+
+financial_task = Task(
+    description=("""Collect and summarize recent financial news articles for press releases for {ticker}.
+    
+    Subtasks:
+    1. Use `search_internet` to find relevant financial news articles and press releases about {ticker}.
+    2. Use `scrape_and_summarize_website` to extract and summarize content from the most relevant links.
+    
+    Combine all findings into a single report that includes:
+    - A summary of the latest financial news and market sentiment
+    - Key events impacting the stock
+    - Any upcoming announcements or trends
+    - The stock ticker ({ticker})
+    
+    Your output should be concise but include all key points, using the most recent and relevant data available.
+    """),
+      agent=financial_analyst,
+      expected_output="A detailed financial analysis report including key financial metrics and a comparison with industry peers.",
+      function=execute_financial_analysis
     )
 
-  def recommend(self, agent):
-    return Task(
-      description=dedent(f"""
-        Review and synthesize the analyses provided by the
-        Financial Analyst and the Research Analyst.
-        Combine these insights to form a comprehensive
-        investment recommendation. 
-        
-        You MUST Consider all aspects, including financial
-        health, market sentiment, and qualitative data from
-        EDGAR filings.
-
-        Make sure to include a section that shows insider 
-        trading activity, and upcoming events like earnings.
-
-        Your final answer MUST be a recommendation for your
-        customer. It should be a full super detailed report, providing a 
-        clear investment stance and strategy with supporting evidence.
-        Make it pretty and well formatted for your customer.
-                         
-        {self.__tip_section()}
-      """),
-      agent=agent,
-      expected_output="A comprehensive investment recommendation report combining all analyses and insights."
-    )
-
-  def __tip_section(self):
-    return "If you do your BEST WORK, I'll give you a $1,000 commission!"
+recommendation_task = Task(
+    description="""Based on the research and financial analysis, provide a recommendation on the stock. 
+    This recommendation should include:
+    - A synthesis of the latest research findings and news.
+    - An evaluation of the financial health of the stock.
+    - A final recommendation: 'Buy', 'Sell', or 'Hold' based on the data.
+    
+    Ensure your recommendation aligns with the stock's performance, both in terms of market sentiment and financial stability.""",
+    agent=investment_advisor,
+    expected_output="A clear investment recommendation (Buy, Sell, Hold) with supporting reasons based on both research and financial analysis.",
+    function=lambda inputs: execute_investment_advice(inputs)
+)

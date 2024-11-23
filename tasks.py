@@ -19,9 +19,9 @@ def extract_top_link(search_results):
     return None
 
 def execute_research(ticker):
-    search_results = research_analyst.invoke_tool("Search topic on the internet", query=f"Latest news about {ticker}")
+    search_results = research_analyst.invoke_tool("Search topic on the internet", {"query": f"Latest news about {ticker}"})
     top_link = extract_top_link(search_results)
-    summary = research_analyst.invoke_tool("Scrape website content", website=top_link)
+    summary = research_analyst.invoke_tool("Scrape website content", {"website": top_link})
     
     return f"""
     Report for {ticker}:
@@ -30,9 +30,9 @@ def execute_research(ticker):
     """
 
 def execute_financial_analysis(ticker):
-    search_results = financial_analyst.invoke_tool("Search topic on the internet", query=f"Latest financial analysis of {ticker}")
+    search_results = financial_analyst.invoke_tool("Search topic on the internet", {"query": f"Latest financial news about {ticker}"})
     top_link = extract_top_link(search_results)
-    summary = financial_analyst.invoke_tool("Scrape website content", website=top_link)
+    summary = financial_analyst.invoke_tool("Scrape website content", {"website": top_link})
 
     return f"""
     Report for {ticker}:

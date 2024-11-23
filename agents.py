@@ -12,7 +12,7 @@ llm = LLM(
     model="groq/llama3-8b-8192",
     temperature=0.5,
     max_tokens=512,
-    api_key="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",
+    api_key=GROQ_API_KEY,
 )
 
 research_analyst = Agent(

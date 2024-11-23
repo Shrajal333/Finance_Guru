@@ -7,6 +7,7 @@ crew = Crew(
     tasks=[research_task, financial_task, recommendation_task],
     process=Process.sequential,
     verbose=True,
+    max_rpm=100
 )
 
 inputs = {"ticker": "AAPL"}

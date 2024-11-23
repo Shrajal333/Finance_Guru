@@ -1,5 +1,14 @@
+import os
 from crewai import Task
+from langchain_groq import ChatGroq
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from agents import financial_analyst, research_analyst, investment_advisor
+
+from dotenv import load_dotenv
+load_dotenv()
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+llm = ChatGroq(model="Gemma-7b-It", api_key=GROQ_API_KEY)
 
 def extract_top_link(search_results):
     lines = search_results.split("\n")
@@ -31,34 +40,29 @@ def execute_financial_analysis(ticker):
     - Summary of Top Article: {summary}
     """
 
-def execute_investment_advice(inputs):
-    research_summary = inputs['research_summary']
-    financial_summary = inputs['financial_summary']
+def execute_investment_advice(financial_summary, research_summary, llm):
+
+    combined_input = f"""
+    Below are the summaries for the stock under consideration:
     
-    recommendation = ""
+    Financial Summary:
+    {financial_summary}
     
-    if "positive" in research_summary.lower():
-        market_sentiment = "positive"
-    elif "negative" in research_summary.lower():
-        market_sentiment = "negative"
-    else:
-        market_sentiment = "neutral"
+    Research Summary:
+    {research_summary}
     
-    if "strong" in financial_summary.lower() and "growth" in financial_summary.lower():
-        financial_health = "strong"
-    elif "weak" in financial_summary.lower() or "decline" in financial_summary.lower():
-        financial_health = "weak"
-    else:
-        financial_health = "stable"
+    Based on the above information, provide a detailed recommendation about whether to buy, hold, or sell the stock.
+    Include key justifications for your recommendation, considering the financial health and market sentiments.
+    """
     
-    if market_sentiment == "positive" and financial_health == "strong":
-        recommendation = "Buy"
-    elif market_sentiment == "negative" and financial_health == "weak":
-        recommendation = "Sell"
-    else:
-        recommendation = "Hold"
-    
-    return f"Recommendation: {recommendation}\n\nResearch Summary: {research_summary}\nFinancial Health: {financial_health}"
+    prompt = PromptTemplate(
+        input_variables=["combined_input"],
+        template="{combined_input}"
+    )
+
+    recommendation_chain = LLMChain(llm=llm, prompt=prompt)
+    recommendation = recommendation_chain.run({"combined_input": combined_input})
+    return recommendation
 
 research_task = Task(
     description=("""Collect and summarize recent news articles and press releases for {ticker}.
@@ -110,5 +114,5 @@ recommendation_task = Task(
     Ensure your recommendation aligns with the stock's performance, both in terms of market sentiment and financial stability.""",
     agent=investment_advisor,
     expected_output="A clear investment recommendation (Buy, Sell, Hold) with supporting reasons based on both research and financial analysis.",
-    function=lambda inputs: execute_investment_advice(inputs)
+    function=lambda inputs: execute_investment_advice(inputs.get("research"), inputs.get("financial_analysis"))
 )

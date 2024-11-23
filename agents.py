@@ -13,21 +13,7 @@ llm = LLM(
     temperature=0.5,
     max_tokens=512,
     api_key="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",
-    base_url=GROQ_API_KEY
 )
-
-research_analyst = Agent(
-        role='The Best Research Analyst',
-        goal="""Amaze all customers by being the best at gathering and interpreting data for ticker {ticker}""",
-        backstory="""Known as the best research analyst, you're skilled in sifting through news, company announcements, and market sentiments working for a super important customer""",
-        verbose=True,
-        tools=[
-            scrape_and_summarize_website,
-            search_internet,
-        ],
-        llm=llm,
-        allow_delegation=False
-    )
 
 research_analyst = Agent(
     role="The Best Research Analyst",

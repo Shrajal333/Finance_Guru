@@ -19,7 +19,6 @@ def main():
         Leverage a multi-agent system with a **Research Analyst, Financial Analyst, and Investment Advisor** to derive strategic investment plans. Enter the stock ticker of any listed company, and let our virtual experts collaborate to provide well-informed investment decisions.
     """)
 
-    # Sidebar with additional guidance and information
     st.sidebar.subheader("How to Use:")
     st.sidebar.caption("""
         1. **:orange[Enter Stock Ticker]**: Provide the ticker symbol of a listed company (e.g., AAPL for Apple Inc.).
@@ -37,9 +36,6 @@ def main():
                         agents=[research_analyst, financial_analyst, investment_advisor],
                         tasks=[research_task, financial_task, recommendation_task],
                         process=Process.sequential,
-                        memory=True,
-                        cache=True,
-                        max_rpm=100
                         )
             
             inputs = {"ticker": company}

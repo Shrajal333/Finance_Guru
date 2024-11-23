@@ -1,4 +1,3 @@
-import pdfkit
 import streamlit as st
 from crewai import Crew, Process
 from tasks import research_task, financial_task, recommendation_task
@@ -46,15 +45,6 @@ def main():
             else:
                 st.markdown("## Investment Recommendations")
                 st.markdown(results)
-                
-                if st.button("Download Report as PDF"):
-                    try:
-                        pdf = pdfkit.from_string(results, False)
-                        st.download_button("Download PDF", pdf, company + "_report.pdf", "application/pdf")
-                    except Exception as e:
-                        st.error("PDF generation failed. Ensure wkhtmltopdf is installed.")
-        else:
-            st.error("Please enter a company name to analyze.")
 
 if __name__ == "__main__":
     main()

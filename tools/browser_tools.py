@@ -22,7 +22,7 @@ def scrape_website_content(website):
     
 @tool("Scrape website content")
 def scrape_and_summarize_website(website):
-    """Designed to scrape the content of a given website and generate a concise, meaningful summary of the information present on the site. It is particularly useful for extracting and condensing large amounts of textual data into a shorter format that captures the key points."""
+    """Designed to scrape the content of a given website and generate a concise, meaningful summary of the information present on the site. It is particularly useful for extracting and condensing large      amounts of textual data into a shorter format that captures the key points."""
 
     content = scrape_website_content(website)
     documents = [Document(page_content=content)]

@@ -4,4 +4,4 @@ The repo contains the build of Finance Guru, which is your ultimate financial de
 
 Enter any company name listed in the stock market (in Ticker) to derive strategic investment plans. The team of multi-agents combines the expertise of a Research Analyst, Financial Analyst, and Investment Advisor, who work collaboratively to analyze and synthesise data, ensuring you receive comprehensive and reliable investment strategies with the best-informed decisions.
 
-![image](https://github.com/user-attachments/assets/470cf044-b677-4ba3-898c-c79f6acdac2e)
+![image](https://github.com/user-attachments/assets/d5ec1dd1-8719-45e7-a8f8-400d79ffdb02)

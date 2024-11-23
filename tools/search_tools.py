@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from langchain.tools import tool
+from crewai.tools import tool
 
 from dotenv import load_dotenv
 load_dotenv()

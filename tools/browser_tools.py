@@ -1,7 +1,7 @@
 import os
 import requests
+from crewai.tools import tool
 from bs4 import BeautifulSoup
-from langchain.tools import tool
 from langchain_groq import ChatGroq
 from langchain import PromptTemplate
 from langchain.schema import Document
@@ -18,7 +18,6 @@ def scrape_website_content(website):
 
     paragraphs = soup.find_all(['p', 'h1', 'h2', 'h3'])
     content = " ".join([para.get_text() for para in paragraphs])
-
     return content
     
 @tool("Scrape website content")

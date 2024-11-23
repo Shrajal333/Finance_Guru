@@ -20,7 +20,10 @@ research_analyst = Agent(
     goal="""Amaze all customers by being the best at gathering and interpreting data for ticker {ticker}.""",
     backstory="""Known as the best research analyst, you're skilled in sifting through news, company announcements, and market sentiments working for a super important customer.""",
     verbose=True,
-    tools=[scrape_and_summarize_website, search_internet],
+    tools=[
+        scrape_and_summarize_website, 
+        search_internet
+    ],
     llm=llm,
     allow_delegation=False,
 )
